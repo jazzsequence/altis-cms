@@ -7,6 +7,8 @@
 
 namespace Altis\CMS\Block_Editor;
 
+use Altis;
+
 /**
  * Set up block editor modifications.
  */
