@@ -14,9 +14,33 @@ use Altis;
  */
 function bootstrap() {
 	add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\\set_default_editor_preferences' );
+	add_action( 'plugins_loaded', __NAMESPACE__ . '\\load_plugins' );
 
+	add_filter( 'asset_loader_plugin_or_theme_file_uri', __NAMESPACE__ . '\\filter_asset_uri' );
+}
+
+/**
+ * Load the Altis Reusable Blocks and Asset Loader plugins.
+ *
+ * @return void
+ */
+function load_plugins() {
 	require_once Altis\ROOT_DIR . '/vendor/humanmade/altis-reusable-blocks/plugin.php';
 	require_once Altis\ROOT_DIR . '/vendor/humanmade/asset-loader/asset-loader.php';
+}
+
+/**
+ * Filter the asset URI to replace Altis\ROOT_DIR with the relative URL path.
+ *
+ * @param string $uri
+ * @return string
+ */
+function filter_asset_uri( string $uri, string $path ) : string {
+	if ( strpos( $path, Altis\ROOT_DIR ) === false ) {
+		return $uri;
+	}
+
+	return content_url( str_replace( Altis\ROOT_DIR, '', $path ) );
 }
 
 /**
