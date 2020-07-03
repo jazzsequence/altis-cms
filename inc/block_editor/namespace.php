@@ -40,7 +40,7 @@ function filter_asset_uri( string $uri, string $path ) : string {
 		return $uri;
 	}
 
-	return content_url( str_replace( Altis\ROOT_DIR, '', $path ) );
+	return str_replace( Altis\ROOT_DIR, home_url(), $path );
 }
 
 /**
