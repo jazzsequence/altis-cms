@@ -16,7 +16,7 @@ function bootstrap() {
 	add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\\set_default_editor_preferences' );
 	add_action( 'plugins_loaded', __NAMESPACE__ . '\\load_plugins' );
 
-	add_filter( 'asset_loader_plugin_or_theme_file_uri', __NAMESPACE__ . '\\filter_asset_uri' );
+	add_filter( 'asset_loader_plugin_or_theme_file_uri', __NAMESPACE__ . '\\filter_asset_uri', 10, 2 );
 }
 
 /**
