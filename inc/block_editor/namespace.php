@@ -16,6 +16,7 @@ function bootstrap() {
 	add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\\set_default_editor_preferences' );
 
 	require_once Altis\ROOT_DIR . '/vendor/humanmade/altis-reusable-blocks/plugin.php';
+	require_once Altis\ROOT_DIR . '/vendor/humanmade/asset-loader/plugin.php';
 }
 
 /**
