@@ -2,7 +2,7 @@
 
 namespace Altis\CMS\Network_UI;
 
-use Altis;
+use Altis\CMS;
 use WP_Site;
 
 /**
@@ -20,7 +20,7 @@ function bootstrap() {
  * @return array
  */
 function get_config() : array {
-	return Altis\get_config()['modules']['cms']['network-ui'];
+	return CMS\get_config()['network-ui'];
 }
 
 /**
