@@ -7,7 +7,6 @@
 
 namespace Altis\CMS\Branding;
 
-use Altis;
 use WP_Admin_Bar;
 use WP_Http;
 use WP_Theme;
@@ -32,7 +31,6 @@ function bootstrap() {
 	add_action( 'admin_init', __NAMESPACE__ . '\\remove_wp_admin_color_schemes' );
 	add_action( 'personal_options', __NAMESPACE__ . '\\add_default_color_scheme_input' );
 	add_filter( 'get_user_option_admin_color', __NAMESPACE__ . '\\override_default_color_scheme' );
-	add_action( 'template_redirect', __NAMESPACE__ . '\\detect_missing_default_theme' );
 	add_filter( 'admin_title', __NAMESPACE__ . '\\override_admin_title' );
 	add_filter( 'insert_user_meta', __NAMESPACE__ . '\\insert_user_meta', 10, 3 );
 	add_filter( 'login_title', __NAMESPACE__ . '\\wordpress_to_altis' );
@@ -182,45 +180,6 @@ function insert_user_meta( array $meta, $user, $update ) : array {
 	$meta['admin_color'] = 'altis';
 
 	return $meta;
-}
-
-/**
- * Detect a missing default theme.
- *
- * If the theme is still the default, and it's missing, we can show them a
- * custom splash page.
- */
-function detect_missing_default_theme() {
-	$env = Altis\get_environment_type();
-	if ( ! in_array( $env, [ 'development', 'local' ], true ) ) {
-		return;
-	}
-
-	// Only activate if the theme is missing.
-	$theme = wp_get_theme();
-	if ( $theme->exists() ) {
-		return;
-	}
-
-	// Check that we're using the default theme.
-	if ( $theme->get_stylesheet() !== WP_DEFAULT_THEME || WP_Theme::get_core_default_theme() !== false ) {
-		return;
-	}
-
-	// No theme, load default helper.
-	$title = __( 'Welcome to Altis', 'altis' );
-	$message = sprintf(
-		'<h1>%s</h1><p>%s</p><p><small>%s</small></p>',
-		$title,
-		sprintf(
-			/* translators: %s: URL for the themes page */
-			__( 'Altis is installed and ready to go. <a href="%s">Activate a theme to get started</a>.', 'altis' ),
-			admin_url( 'themes.php' )
-		),
-		__( 'You‘re seeing this page because debug mode is enabled, and the default theme directory is missing.', 'altis' )
-	);
-
-	wp_die( wp_kses_post( $message ), esc_html( $title ), [ 'response' => intval( WP_Http::NOT_FOUND ) ] );
 }
 
 /**
