@@ -13,25 +13,5 @@
     "roots/wp-password-bcrypt": "1.0.0",
     "johnbillion/extended-cpts": "^4.4.1",
     "humanmade/clean-html": "^2.0.0",
-  },
-  "autoload": {
-    "files": [
-      "load.php",
-      "inc/namespace.php",
-      "inc/branding/namespace.php",
-      "inc/block_editor/namespace.php",
-      "inc/permalinks/namespace.php",
-      "inc/add_site_ui/namespace.php",
-      "inc/cli/namespace.php",
-      "inc/network_ui/namespace.php",
-      "inc/real_guids/namespace.php",
-      "inc/signup_notification/namespace.php"
-    ],
-    "classmap": [
-      "inc/"
-    ]
-  },
-  "extra": {
-    "altis": {}
   }
 }
