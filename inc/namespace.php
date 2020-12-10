@@ -15,6 +15,9 @@ use WP_DB_Table_Signups;
  * Main bootstrap / entry point for the CMS module.
  */
 function bootstrap() {
+	// Load all the things.
+	init();
+	
 	$config = get_config();
 
 	// Prevent web access to wp-admin/install.php.
@@ -110,6 +113,46 @@ function bootstrap() {
 
 	// Delete signups object cache before we load the signups page.
 	add_action( 'after_signup_user', __NAMESPACE__ . '\\clear_signups_cache' );
+}
+
+/**
+ * Load all the required files.
+ */
+function init() {
+	foreach ( 
+	[ 
+      		"branding/namespace.php",
+      		"block_editor/namespace.php",
+      		"permalinks/namespace.php",
+      		"add_site_ui/namespace.php",
+      		"cli/namespace.php",
+      		"network_ui/namespace.php",
+      		"real_guids/namespace.php",
+      		"signup_notification/namespace.php"
+	] as $filename ) {
+		require_once $filename;
+	}
+}
+
+/**
+ * Get the default config.
+ */
+function get_config() {
+	return apply_filters( 'jazzsequence.get_config', [
+		'enabled' => true,
+		'branding' => true,
+		'large-network' => false,
+		'login-logo' => '/vendor/altis/cms/assets/logo.svg',
+		'shared-blocks' => true,
+		'default-theme' => 'twentytwentyone',
+		'remove-emoji' => true,
+		'xmlrpc' => false,
+		'feeds' => true,
+		'cloner' => false,
+		'network-ui' => [
+			'disable-spam' => true,
+		],
+	] );
 }
 
 /**
