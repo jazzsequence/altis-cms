@@ -7,7 +7,6 @@
 
 namespace Altis\CMS;
 
-use Altis;
 use WP_CLI;
 use WP_DB_Table_Signupmeta;
 use WP_DB_Table_Signups;
@@ -16,13 +15,12 @@ use WP_DB_Table_Signups;
  * Main bootstrap / entry point for the CMS module.
  */
 function bootstrap() {
-	$config = Altis\get_config()['modules']['cms'];
+	$config = get_config();
 
 	// Prevent web access to wp-admin/install.php.
 	add_action( 'wp_loaded', __NAMESPACE__ . '\\prevent_web_install' );
 
 	CLI\bootstrap();
-	Remove_Updates\bootstrap();
 	Permalinks\bootstrap();
 	Add_Site_UI\bootstrap();
 	Network_UI\bootstrap();
@@ -66,8 +64,6 @@ function bootstrap() {
 		add_action( 'template_redirect', __NAMESPACE__ . '\\disable_feed_redirect' );
 	}
 
-	add_action( 'plugins_loaded', __NAMESPACE__ . '\\load_plugins', 1 );
-
 	if ( ! defined( 'DISALLOW_FILE_EDIT' ) ) {
 		define( 'DISALLOW_FILE_EDIT', true );
 	}
@@ -77,11 +73,6 @@ function bootstrap() {
 
 	add_filter( 'pre_site_option_fileupload_maxk', __NAMESPACE__ . '\\override_fileupload_maxk_option' );
 	add_filter( 'wp_fatal_error_handler_enabled', __NAMESPACE__ . '\\filter_wp_fatal_handler' );
-
-	// Hide Healthcheck UI.
-	add_action( 'admin_menu', __NAMESPACE__ . '\\remove_site_healthcheck_admin_menu' );
-	add_action( 'admin_init', __NAMESPACE__ . '\\disable_site_healthcheck_access' );
-	add_action( 'wp_dashboard_setup', __NAMESPACE__ . '\\remove_site_healthcheck_dashboard_widget' );
 
 	add_filter( 'login_headerurl', __NAMESPACE__ . '\\login_header_url' );
 
@@ -178,7 +169,7 @@ function disable_emojis_remove_dns_prefetch( array $urls, string $relation_type 
  * Add the custom login logo to the login page.
  */
 function add_login_logo() {
-	$logo = Altis\get_config()['modules']['cms']['login-logo'];
+	$logo = get_config()['login-logo'];
 	?>
 	<style>
 		.login h1 a {
@@ -190,17 +181,6 @@ function add_login_logo() {
 	<?php
 }
 
-/**
- * Load plugins that are bundled with the CMS module.
- */
-function load_plugins() {
-	require_once Altis\ROOT_DIR . '/vendor/stuttter/wp-user-signups/wp-user-signups.php';
-
-	$config = Altis\get_config()['modules']['cms'];
-	if ( $config['cloner'] ) {
-		require_once Altis\ROOT_DIR . '/vendor/humanmade/post-cloner/post-cloner.php';
-	}
-}
 
 /**
  * Increase the max upload size (in kb) to 1GB.
@@ -235,43 +215,6 @@ function filter_wp_fatal_handler() : bool {
  */
 function filter_xmlrpc_element_limit_handler( int $element_limit ) : int {
 	return 1;
-}
-
-/**
- * Remove the Site Health link in the Tools menu
- */
-function remove_site_healthcheck_admin_menu() {
-	remove_submenu_page( 'tools.php', 'site-health.php' );
-}
-
-/**
- * Disable access to the site health check admin page.
- *
- * We have disables the site health check as it exposes a lot of details
- * and potential false positives, and ultimately is not useful for our
- * platform.
- *
- * @return void
- */
-function disable_site_healthcheck_access() {
-	/**
-	 * @var string
-	 */
-	global $pagenow;
-	if ( $pagenow !== 'site-health.php' ) {
-		return;
-	}
-
-	wp_die( 'Site Health not accessible.' );
-}
-
-/**
- * Remove the healthcheck dashboard widget.
- *
- * @return void
- */
-function remove_site_healthcheck_dashboard_widget() {
-	remove_meta_box( 'dashboard_site_health', 'dashboard', 'normal' );
 }
 
 /**
