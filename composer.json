@@ -4,6 +4,10 @@
   "license": "GPL-2.0-or-later",
   "authors": [
     {
+      "name": "Chris Reynolds",
+      "email": "me@chrisreynolds.io"
+    },
+    {
       "name": "Human Made",
       "email": "hello@humanmade.com"
     }
