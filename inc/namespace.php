@@ -83,6 +83,12 @@ function bootstrap() {
 		WP_CLI::add_hook( 'after_invoke:core multisite-install', __NAMESPACE__ . '\\setup_user_signups_on_install' );
 	}
 
+	// Fix network admin site actions.
+	add_filter( 'network_admin_url', __NAMESPACE__ . '\\fix_network_action_confirmation' );
+
+	// Fix user signups admin links.
+	add_filter( 'wp_signups_admin_url', __NAMESPACE__ . '\\fix_user_signups_action_links', 10, 3 );
+
 	// Don't show the welcome panel.
 	add_filter( 'get_user_metadata', __NAMESPACE__ . '\\hide_welcome_panel', 10, 3 );
 
@@ -113,6 +119,9 @@ function bootstrap() {
 
 	// Delete signups object cache before we load the signups page.
 	add_action( 'after_signup_user', __NAMESPACE__ . '\\clear_signups_cache' );
+
+	// Fix redirect canonical redirecting on equivalent query strings.
+	add_filter( 'redirect_canonical', __NAMESPACE__ . '\\maybe_redirect', 11, 2 );
 }
 
 /**
@@ -153,6 +162,44 @@ function get_config() {
 			'disable-spam' => true,
 		],
 	] );
+}
+
+/**
+ * Adds `_wp_http_referer` to confirm action links in the network admin.
+ *
+ * @see https://core.trac.wordpress.org/ticket/52378
+ *
+ * @param string $url The complete network admin URL including scheme and path.
+ * @return string The complete network admin URL including scheme and path.
+ */
+function fix_network_action_confirmation( string $url ) : string {
+	parse_str( wp_parse_url( $url, PHP_URL_QUERY ), $params );
+	if ( isset( $params['action'] ) && $params['action'] === 'confirm' ) {
+		$url = add_query_arg( [
+			'_wp_http_referer' => urlencode( wp_unslash( $_SERVER['REQUEST_URI'] ) ),
+		], $url );
+	}
+	return $url;
+}
+
+/**
+ * Filter the WP Signups admin URLs to prevent endless redirects.
+ *
+ * The action handling logic in WP Signups relies on the value of `wp_get_referer()` and so
+ * does not work in cloud environments.
+ *
+ * @param string $url The full URL.
+ * @param string $admin_url The base admin URL.
+ * @param array $args The page query arguments.
+ * @return string
+ */
+function fix_user_signups_action_links( string $url, string $admin_url, array $args ) : string {
+	if ( isset( $args['action'] ) || isset( $args['bulk_action'] ) || isset( $args['bulk_action2'] ) ) {
+		$url = add_query_arg( [
+			'_wp_http_referer' => urlencode( wp_unslash( $_SERVER['REQUEST_URI'] ) ),
+		], $url );
+	}
+	return $url;
 }
 
 /**
@@ -201,6 +248,13 @@ function disable_emojis_remove_dns_prefetch( array $urls, string $relation_type 
 	// Strip out any URLs referencing the WordPress.org emoji location.
 	$emoji_svg_url_bit = 'https://s.w.org/images/core/emoji/';
 	foreach ( $urls as $key => $url ) {
+		if ( is_array( $url ) ) {
+			if ( ! isset( $url['href'] ) ) {
+				continue;
+			}
+
+			$url = $url['href'];
+		}
 		if ( strpos( $url, $emoji_svg_url_bit ) !== false ) {
 			unset( $urls[ $key ] );
 		}
@@ -258,6 +312,45 @@ function filter_wp_fatal_handler() : bool {
  */
 function filter_xmlrpc_element_limit_handler( int $element_limit ) : int {
 	return 1;
+}
+
+/**
+ * Remove the Site Health link in the Tools menu
+ */
+function remove_site_healthcheck_admin_menu() {
+	remove_submenu_page( 'tools.php', 'site-health.php' );
+}
+
+/**
+ * Disable access to the site health check admin page.
+ *
+ * We have disables the site health check as it exposes a lot of details
+ * and potential false positives, and ultimately is not useful for our
+ * platform.
+ *
+ * @return void
+ */
+function disable_site_healthcheck_access() {
+	/**
+	 * The current admin page script name.
+	 *
+	 * @var string
+	 */
+	global $pagenow;
+	if ( $pagenow !== 'site-health.php' ) {
+		return;
+	}
+
+	wp_die( 'Site Health not accessible.' );
+}
+
+/**
+ * Remove the healthcheck dashboard widget.
+ *
+ * @return void
+ */
+function remove_site_healthcheck_dashboard_widget() {
+	remove_meta_box( 'dashboard_site_health', 'dashboard', 'normal' );
 }
 
 /**
@@ -331,12 +424,17 @@ function set_comments_per_page( $value ) : int {
 /**
  * Ensure URLs do not contain any relative paths.
  *
- * @param string $url The dependency URL.
+ * @param string|null $url The dependency URL.
  * @param string $handle The dependency handle.
- * @return string
+ * @return string|null
  */
-function real_url_path( string $url, string $handle ) : string {
+function real_url_path( ?string $url, string $handle ) : ?string {
 	global $wp_scripts, $wp_styles;
+
+	// Avoid odd behaviour if null or empty value is passed.
+	if ( empty( $url ) ) {
+		return $url;
+	}
 
 	// Skip if there are no /./ or /../ patterns.
 	if ( strpos( $url, '/.' ) === false ) {
@@ -390,4 +488,47 @@ function real_url_path( string $url, string $handle ) : string {
  */
 function clear_signups_cache() {
 	wp_cache_set( 'last_changed', microtime(), 'signups' );
+}
+
+/**
+ * Determines whether a redirect should actucally occur.
+ *
+ * In some instances redirect_canonical() will rebuild the query string which can change
+ * its formatting by removing trailing = signs and URL encoding keys. This can result in
+ * a redirect that will generate the same Batcache key. Once the redirect is cached then
+ * Batcache will start to redirect endlessly. This filter prevents that behaviour.
+ *
+ * @param string $redirect_url The URL being redirected to.
+ * @param string $requested_url The original URL requested.
+ * @return string The filtered redirect target URL.
+ */
+function maybe_redirect( $redirect_url, $requested_url ) {
+	$redirect_query_string = parse_url( $redirect_url, PHP_URL_QUERY );
+	$requested_query_string = parse_url( $redirect_url, PHP_URL_QUERY );
+
+	// Check we have query strings on both request and redirect.
+	if ( empty( $redirect_query_string ) || empty( $requested_query_string ) ) {
+		return $redirect_url;
+	}
+
+	// If the the base URLs are different then perform the redirect.
+	if ( substr( $redirect_url, 0, strpos( $redirect_url, '?' ) ) !== substr( $requested_url, 0, strpos( $requested_url, '?' ) ) ) {
+		return $redirect_url;
+	}
+
+	// Get the query strings being redirected to as an array.
+	parse_str( $redirect_query_string, $redirect_query );
+	parse_str( $requested_query_string, $requested_query );
+
+	// Ensure query keys are sorted the same way.
+	ksort( $redirect_query );
+	ksort( $requested_query );
+
+	// If the parsed query strings do not match then perform the redirect.
+	if ( serialize( $redirect_query ) !== serialize( $requested_query ) ) {
+		return $redirect_url;
+	}
+
+	// Prevent unecessary redirect from occuring and getting cached by returning the original URL.
+	return $requested_url;
 }
