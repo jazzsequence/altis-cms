@@ -17,7 +17,7 @@ use WP_DB_Table_Signups;
 function bootstrap() {
 	// Load all the things.
 	init();
-	
+
 	$config = get_config();
 
 	// Prevent web access to wp-admin/install.php.
@@ -128,16 +128,16 @@ function bootstrap() {
  * Load all the required files.
  */
 function init() {
-	foreach ( 
-	[ 
-      		"branding/namespace.php",
-      		"block_editor/namespace.php",
-      		"permalinks/namespace.php",
-      		"add_site_ui/namespace.php",
-      		"cli/namespace.php",
-      		"network_ui/namespace.php",
-      		"real_guids/namespace.php",
-      		"signup_notification/namespace.php"
+	foreach (
+	[
+		"add_site_ui/namespace.php",
+		"branding/namespace.php",
+		"block_editor/namespace.php",
+		"cli/namespace.php",
+		"network_ui/namespace.php",
+		"permalinks/namespace.php",
+		"real_guids/namespace.php",
+		"signup_notification/namespace.php"
 	] as $filename ) {
 		require_once $filename;
 	}
