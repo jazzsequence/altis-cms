@@ -15,7 +15,7 @@
   "require": {
     "stuttter/wp-user-signups": "^5.0.0",
     "roots/wp-password-bcrypt": "1.0.0",
-    "johnbillion/extended-cpts": "^4.4.1",
+    "johnbillion/extended-cpts": "^4.5.1",
     "humanmade/clean-html": "^2.0.0"
   }
 }
